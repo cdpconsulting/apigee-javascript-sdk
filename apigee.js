@@ -3763,10 +3763,13 @@ Usergrid.Asset.prototype.download = function(callback) {
                         });
                     }
                 }
+                /*
+                 //We patch each instance of HttpRequest class and leave the native implementation untouched
+
                 //Setting up the catching of errors and network calls
                 if (this.deviceConfig.networkMonitoringEnabled) {
-                    this.patchNetworkCalls(XMLHttpRequest);
-                }
+                    //this.patchNetworkCalls(XMLHttpRequest);
+                }*/
                 window.onerror = Apigee.MonitoringClient.catchCrashReport;
                 this.startSession();
                 this.sync({});
@@ -3780,11 +3783,13 @@ Usergrid.Asset.prototype.download = function(callback) {
         //Let's monkeypatch logging calls to intercept and send to server.
         if (self.deviceConfig.enableLogMonitoring) {
             self.patchLoggingCalls();
-        }
+        }/*
+        //We patch each instance of HttpRequest class and leave the native implementation untouched
         //Setting up the catching of errors and network calls
         if (self.deviceConfig.networkMonitoringEnabled) {
             self.patchNetworkCalls(XMLHttpRequest);
         }
+        */
     };
     /**
    * Function for retrieving the current Apigee Monitoring configuration.
@@ -3881,6 +3886,9 @@ Usergrid.Asset.prototype.download = function(callback) {
         syncData.timeStamp = timeStamp();
         //Send it to the apmMetrics endpoint.
         var syncRequest = new XMLHttpRequest();
+        if (this.deviceConfig.networkMonitoringEnabled) {
+            this.patchNetworkCalls(syncRequest);
+        }
         var path = this.URI + "/" + this.orgName + "/" + this.appName + "/apm/apmMetrics";
         syncRequest.open(VERBS.post, path, false);
         syncRequest.setRequestHeader("Accept", "application/json");
@@ -4082,9 +4090,9 @@ Usergrid.Asset.prototype.download = function(callback) {
     Apigee.MonitoringClient.prototype.patchNetworkCalls = function(XHR) {
         "use strict";
         var apigee = this;
-        var open = XHR.prototype.open;
-        var send = XHR.prototype.send;
-        XHR.prototype.open = function(method, url, async, user, pass) {
+        var open = XHR.open;
+        var send = XHR.send;
+        XHR.open = function(method, url, async, user, pass) {
             this._method = method;
             this._url = url;
             open.call(this, method, url, async, user, pass);
@@ -4096,7 +4104,7 @@ Usergrid.Asset.prototype.download = function(callback) {
                 self.setRequestHeader("X-Apigee-Client-Request-Id", randomUUID());
             })(this);
         };
-        XHR.prototype.send = function(data) {
+        XHR.send = function(data) {
             var self = this;
             var startTime;
             var oldOnReadyStateChange;
